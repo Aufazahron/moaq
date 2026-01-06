@@ -1,0 +1,170 @@
+{
+  "uuid": "38ccb0909c5331796db8c45357de8e39",
+  "path": "Offline/UAS%20SENSOR",
+  "name": "UAS SENSOR",
+  "content": "",
+  "created_at": "2025-12-12 12:52:34",
+  "updated_at": "2026-01-07 00:04:05",
+  "stick": "",
+  "documents": [
+    {
+      "uuid": "4af96b07c3dbaabb86e7f9eed621adea",
+      "title": "Sheet_1",
+      "description": "",
+      "docType": "1",
+      "master": "",
+      "thumb": "/images/thumb-default.png",
+      "components": {
+        "5f17bba28bd34c0e8919c3d8e11b9aea": 1,
+        "d2e2df26d4044b558e3cee6e509f23ae": 1,
+        "a275bd51d209493690d29dfc4d071cd5": 1,
+        "1fc5672272e14ca88d093e28c4a9766b": 1
+      },
+      "BOM": [
+        [
+          "Value",
+          "Quantity",
+          "Package",
+          "Components",
+          "CustomPara"
+        ],
+        [
+          "4PIN RIBBON CABLE",
+          1,
+          "4PIN RIBBON",
+          "SW_1",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "NODEMCU-32SLUA",
+          1,
+          "COMM-TH_NODEMCU-32SLUA",
+          "U1",
+          {
+            "Manufacturer Part": "NodeMCU-32SLua",
+            "Manufacturer": "Ai-Thinker(安信可)",
+            "Supplier": "LCSC",
+            "Supplier Part": "C111436"
+          }
+        ],
+        [
+          "240x320_2.4\"_LCD_SPI_TFT_ILI9341",
+          1,
+          "2.4_TFT_TS",
+          "U2",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "keyPad 4*4",
+          1,
+          "KEYPAD 4X4 (KEYPAD 4*4)",
+          "U3",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ]
+      ],
+      "updateTime": 1766375800,
+      "createTime": 1765518755,
+      "histories": [],
+      "created_at": "2025-12-12 12:52:35",
+      "updated_at": "2025-12-22 10:56:40"
+    },
+    {
+      "uuid": "dd18b4036a02bd9dfa9e5ffd59e46e6d",
+      "puuid": "38ccb0909c5331796db8c45357de8e39",
+      "title": "PCB_UAS SENSOR",
+      "filename": "PCB_UAS SENSOR.json",
+      "description": "",
+      "docType": "3",
+      "master": "",
+      "thumb": "/images/thumb-default.png",
+      "components": {
+        "b7fb9cc41cf844d9913fef6ef13b906d": 1,
+        "6cdda41777024086945d62a5a913685c": 1,
+        "c733549bae1b435289e89a3c6e77f8d4": 1,
+        "e6637f236ffd4205b05d73b08b3fa218": 1
+      },
+      "BOM": [
+        [
+          "Value",
+          "Quantity",
+          "Package",
+          "Components",
+          "CustomPara"
+        ],
+        [
+          "4PIN RIBBON CABLE",
+          1,
+          "4PIN RIBBON",
+          "SW_1",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "NODEMCU-32SLUA",
+          1,
+          "COMM-TH_NODEMCU-32SLUA",
+          "U1",
+          {
+            "Manufacturer Part": "NodeMCU-32SLua",
+            "Manufacturer": "Ai-Thinker(安信可)",
+            "Supplier": "LCSC",
+            "Supplier Part": "C111436"
+          }
+        ],
+        [
+          "keyPad 4*4",
+          1,
+          "KEYPAD 4X4 (KEYPAD 4*4)",
+          "U3",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "240x320_2.4\"_LCD_SPI_TFT_ILI9341",
+          1,
+          "2.4_TFT_TS",
+          "U2",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ]
+      ],
+      "updateTime": 1766142999,
+      "createTime": 1765722884,
+      "histories": [],
+      "created_at": "2025-12-14 21:34:44",
+      "updated_at": "2025-12-19 18:16:39"
+    }
+  ],
+  "sort": [],
+  "title": "UAS SENSOR",
+  "foldername": "UAS SENSOR",
+  "schfilename": "UAS SENSOR.json",
+  "schfilemtime": 1766375800472
+}
