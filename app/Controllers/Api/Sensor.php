@@ -46,16 +46,24 @@ class Sensor extends ResourceController
             return $this->failValidationError("Data kosong atau format JSON salah");
         }
 
+        // Check if data is wrapped in 'data' object
+        $payload = $dataInput;
+        if (isset($dataInput['data'])) {
+            $payload = $dataInput['data'];
+        }
+
         // Validasi minimal harus ada data sensors
-        if (!isset($dataInput['sensors'])) {
+        if (!isset($payload['sensors'])) {
             return $this->failValidationError("Data 'sensors' tidak ditemukan dalam payload");
         }
 
         try {
             // Initialize Models
-            $logModel    = new LogModel();
-            $sensorModel = new SensorModel();
-            $time        = date('Y-m-d H:i:s');
+        $logModel    = new LogModel();
+        $sensorModel = new SensorModel();
+        
+        // Gunakan Time class CI4 agar timezone Asia/Jakarta konsisten
+        $time = \CodeIgniter\I18n\Time::now('Asia/Jakarta')->toDateTimeString();
 
             // 2. Simpan Full JSON ke Log untuk keperluan debugging
             $logModel->insert([
@@ -64,50 +72,89 @@ class Sensor extends ResourceController
             ]);
 
             // 3. Simpan Data Sensor ke Table Sensors
-            $sensors = $dataInput['sensors'];
+            $sensors = $payload['sensors'];
+            
+            // Sanity Check / Data Cleaning (Avoid anomalies like 200k+ values)
+            $phVal = floatval($sensors['ph'] ?? 0);
+            $tdsVal = floatval($sensors['tds'] ?? 0);
+            $turbVal = floatval($sensors['turb'] ?? 0);
+
+            // Filter: Jika nilai pH tidak masuk akal (di luar 0-14), anggap null atau abaikan
+            if ($phVal < 0 || $phVal > 14) $phVal = null;
+            // Filter: Jika TDS > 5000 ppm (biasanya sensor error/noise), batasi atau abaikan
+            if ($tdsVal < 0 || $tdsVal > 5000) $tdsVal = null;
+            // Filter: Jika Turbidity > 2000 NTU (sangat kotor sekali/anomaly), batasi atau abaikan
+            if ($turbVal < 0 || $turbVal > 2000) $turbVal = null;
+            
+            // Calculate water quality based on parameters
+            $ph = $phVal;
+            $tds = $tdsVal;
+            $turb = $turbVal;
+            
+            // Determine water quality
+            $waterQuality = 'Bagus';
+            
+            if ($ph === null || $tds === null || $turb === null) {
+                $waterQuality = 'Kurang Bagus'; // Data tidak valid diperlakukan sebagai problem
+            } else {
+                if ($ph < 6.5 || $ph > 8.0) {
+                    $waterQuality = 'Kurang Bagus';
+                } elseif ($tds > 1000) {
+                    $waterQuality = 'Kurang Bagus';
+                } elseif ($turb < 5 || $turb > 50) {
+                    $waterQuality = 'Kurang Bagus';
+                }
+            }
+            
             $sensorData = [
-                'ph'         => $sensors['ph'] ?? null,
-                'tds'        => $sensors['tds'] ?? null,
-                'turb'       => $sensors['turb'] ?? null,
-                'tank'       => $sensors['tank'] ?? null,
-                'chamber'    => $sensors['Chamber'] ?? $sensors['chamber'] ?? null,
-                'created_at' => $time,
+                'ph'            => $ph,
+                'tds'           => $tds,
+                'turb'          => $turb,
+                'tank'          => $sensors['tank'] ?? null,
+                'chamber'       => $sensors['Chamber'] ?? $sensors['chamber'] ?? null,
+                'water_quality' => $waterQuality,
+                'created_at'    => $time,
             ];
             $sensorModel->insert($sensorData);
 
-            // 4. Simpan ke water_parameters jika ada data suhu/DO
-            if (isset($sensors['temp']) || isset($sensors['do'])) {
-                $waterModel = new WaterParameterModel();
-                $waterData = [
-                    'temperature'       => $sensors['temp'] ?? $sensors['temperature'] ?? null,
-                    'ph'                => $sensors['ph'] ?? null,
-                    'dissolved_oxygen'  => $sensors['do'] ?? $sensors['dissolved_oxygen'] ?? null,
-                    'turbidity'         => $sensors['turb'] ?? $sensors['turbidity'] ?? null,
-                    'tds'               => $sensors['tds'] ?? null,
-                    'timestamp'         => $time,
-                ];
-                $waterModel->insert($waterData);
+            // 4. Proses Peringatan Parameter (Alerts)
+            $waterModel = new WaterParameterModel();
+            
+            // Siapkan data untuk dicek alert-nya
+            $checkData = [
+                'temperature'       => $sensors['temp'] ?? $sensors['temperature'] ?? null,
+                'ph'                => $ph,
+                'dissolved_oxygen'  => $sensors['do'] ?? $sensors['dissolved_oxygen'] ?? null,
+                'turbidity'         => $turb,
+                'tds'               => $tds,
+            ];
 
-                // 5. Cek apakah ada parameter yang keluar dari set-point
-                $alerts = $waterModel->checkParameterAlerts($waterData);
-                if (!empty($alerts)) {
-                    // Simpan notifikasi jika ada peringatan
-                    $db = \Config\Database::connect();
-                    foreach ($alerts as $alert) {
-                        $db->table('notifications')->insert([
-                            'type'       => 'warning',
-                            'message'    => $alert,
-                            'is_read'    => 0,
-                            'created_at' => $time
-                        ]);
-                    }
+            // Simpan ke water_parameters jika ada data suhu/DO untuk histori parameter lengkap
+            if (isset($sensors['temp']) || isset($sensors['do'])) {
+                $waterData = $checkData;
+                $waterData['timestamp'] = $time;
+                $waterModel->insert($waterData);
+            }
+
+            // 5. Cek apakah ada parameter yang keluar dari set-point
+            $alerts = $waterModel->checkParameterAlerts($checkData);
+            if (!empty($alerts)) {
+                // Simpan notifikasi jika ada peringatan
+                $db = \Config\Database::connect();
+                foreach ($alerts as $alert) {
+                    $db->table('notifications')->insert([
+                        'type'       => 'warning',
+                        'message'    => $alert,
+                        'is_read'    => 0,
+                        'created_at' => $time
+                    ]);
                 }
             }
 
             // 6. Update status actuators jika ada
-            if (isset($dataInput['actuators'])) {
+            if (isset($payload['actuators'])) {
                 $db = \Config\Database::connect();
-                $actuators = $dataInput['actuators'];
+                $actuators = $payload['actuators'];
                 
                 // Insert actuator status
                 $db->table('actuators')->insert([
@@ -132,13 +179,19 @@ class Sensor extends ResourceController
                 }
             }
 
-            return $this->respondCreated([
-                'status'  => 'success',
-                'message' => 'Data berhasil disimpan ke database',
-                'data'    => [
-                    'sensors'   => $sensorData,
-                    'timestamp' => $time
-                ]
+            return $this->respond([
+                'data' => [
+                    'status' => $payload['status'] ?? 'STANDBY',
+                    'sensors' => [
+                        'turb'    => $sensorData['turb'],
+                        'tds'     => $sensorData['tds'],
+                        'tank'    => $sensorData['tank'],
+                        'ph'      => $sensorData['ph'],
+                        'chamber' => $sensorData['chamber']
+                    ],
+                    'actuators' => $payload['actuators'] ?? ['mixer' => 0] 
+                ],
+                'server_time' => $time
             ]);
 
         } catch (\Exception $e) {

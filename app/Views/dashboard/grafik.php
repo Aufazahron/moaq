@@ -147,6 +147,17 @@
                 height: 400px;
             }
         }
+
+        .range-btn {
+            background: transparent;
+            color: var(--gray);
+        }
+
+        .range-btn.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
     </style>
 </head>
 <body>
@@ -168,13 +179,13 @@
                 <i class="fas fa-home"></i>
                 <span>Dashboard</span>
             </a>
-            <a href="<?= base_url('dashboard/setpoint') ?>" class="nav-item">
-                <i class="fas fa-sliders-h"></i>
-                <span>Set-Point</span>
+            <a href="<?= base_url('dashboard/logs') ?>" class="nav-item">
+                <i class="fas fa-list-alt"></i>
+                <span>Logs</span>
             </a>
-            <a href="<?= base_url('dashboard/manual-control') ?>" class="nav-item">
-                <i class="fas fa-cog"></i>
-                <span>Kontrol Manual</span>
+            <a href="<?= base_url('dashboard/history') ?>" class="nav-item">
+                <i class="fas fa-history"></i>
+                <span>Histori Data</span>
             </a>
             <a href="<?= base_url('dashboard/grafik') ?>" class="nav-item active">
                 <i class="fas fa-chart-line"></i>
@@ -191,10 +202,17 @@
         <h1 class="page-title">Grafik Parameter Air</h1>
 
         <div class="chart-card">
-            <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: var(--dark);">
-                <i class="fas fa-chart-line" style="color: var(--primary); margin-right: 0.5rem;"></i>
-                Data Real-time Parameter Air
-            </h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 600; color: var(--dark);">
+                    <i class="fas fa-chart-line" style="color: var(--primary); margin-right: 0.5rem;"></i>
+                    Data Real-time Parameter Air
+                </h2>
+                <div style="display: flex; align-items: center; gap: 0.5rem; background: #f3f4f6; padding: 0.25rem; border-radius: 8px;">
+                    <button onclick="changeRange('latest')" class="range-btn <?= $currentRange === 'latest' ? 'active' : '' ?>" id="range-latest" style="padding: 0.5rem 1rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.3s;">Real-time</button>
+                    <button onclick="changeRange('1h')" class="range-btn <?= $currentRange === '1h' ? 'active' : '' ?>" id="range-1h" style="padding: 0.5rem 1rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.3s;">1 Jam Terakhir</button>
+                    <button onclick="changeRange('24h')" class="range-btn <?= $currentRange === '24h' ? 'active' : '' ?>" id="range-24h" style="padding: 0.5rem 1rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.3s;">24 Jam Terakhir</button>
+                </div>
+            </div>
             <div class="chart-container">
                 <canvas id="parameterChart"></canvas>
             </div>
@@ -211,46 +229,43 @@
                 labels: chartData.labels,
                 datasets: [
                     {
-                        label: 'Suhu (°C)',
-                        data: chartData.temperature,
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        borderWidth: 3,
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        pointHoverBackgroundColor: '#f59e0b',
-                        pointHoverBorderColor: '#fff',
-                        pointHoverBorderWidth: 2
-                    },
-                    {
-                        label: 'pH',
+                        label: 'pH Air',
                         data: chartData.ph,
                         borderColor: '#3b82f6',
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
                         tension: 0.4,
                         fill: true,
                         borderWidth: 3,
-                        pointRadius: 0,
+                        pointRadius: 2,
                         pointHoverRadius: 6,
-                        pointHoverBackgroundColor: '#3b82f6',
-                        pointHoverBorderColor: '#fff',
-                        pointHoverBorderWidth: 2
+                        yAxisID: 'y',
+                        spanGaps: true
                     },
                     {
-                        label: 'Oksigen Terlarut (mg/L)',
-                        data: chartData.do,
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        label: 'Kekeruhan (NTU)',
+                        data: chartData.turb,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
                         tension: 0.4,
                         fill: true,
                         borderWidth: 3,
-                        pointRadius: 0,
+                        pointRadius: 2,
                         pointHoverRadius: 6,
-                        pointHoverBackgroundColor: '#10b981',
-                        pointHoverBorderColor: '#fff',
-                        pointHoverBorderWidth: 2
+                        yAxisID: 'y',
+                        spanGaps: true
+                    },
+                    {
+                        label: 'TDS (ppm)',
+                        data: chartData.tds,
+                        borderColor: '#db2777',
+                        backgroundColor: 'rgba(219, 39, 119, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 3,
+                        pointRadius: 2,
+                        pointHoverRadius: 6,
+                        yAxisID: 'y1',
+                        spanGaps: true
                     }
                 ]
             },
@@ -318,6 +333,30 @@
                             },
                             color: '#6b7280'
                         },
+                        title: {
+                            display: true,
+                            text: 'pH / NTU'
+                        },
+                        border: {
+                            color: '#e5e7eb'
+                        }
+                    },
+                    y1: {
+                        beginAtZero: false,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            },
+                            color: '#6b7280'
+                        },
+                        title: {
+                            display: true,
+                            text: 'TDS (ppm)'
+                        },
                         border: {
                             color: '#e5e7eb'
                         }
@@ -329,6 +368,49 @@
                 }
             }
         });
+
+        // Realtime Update Polling
+        let currentRange = '<?= $currentRange ?>';
+
+        function changeRange(range) {
+            currentRange = range;
+            
+            // Update UI buttons
+            document.querySelectorAll('.range-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('range-' + range).classList.add('active');
+            
+            // Refresh with current range immediately, skip animation for smooth range switching
+            updateRealtimeChart(true);
+        }
+
+        function updateRealtimeChart(isRangeSwitch = false) {
+            fetch('<?= base_url('dashboard/realtime') ?>?range=' + currentRange)
+                .then(response => response.json())
+                .then(res => {
+                    if (res.chart) {
+                        const newChartData = res.chart;
+                        
+                        // Update Data
+                        chart.data.labels = newChartData.labels;
+                        chart.data.datasets[0].data = newChartData.ph;
+                        chart.data.datasets[1].data = newChartData.turb;
+                        chart.data.datasets[2].data = newChartData.tds;
+                        
+                        // Jika ganti range, matikan animasi biar nggak "narik" (stretching)
+                        // Data terbaru akan tetap di kanan, data lama akan melebar ke kiri
+                        if (isRangeSwitch) {
+                            chart.update('none'); 
+                        } else {
+                            // Update normal (Real-time polling)
+                            chart.update(currentRange === 'latest' ? 'none' : 'default'); 
+                        }
+                    }
+                })
+                .catch(err => console.error('Grafik update failed:', err));
+        }
+
+        // Run Every 15 seconds
+        setInterval(updateRealtimeChart, 15000);
     </script>
 </body>
 </html>

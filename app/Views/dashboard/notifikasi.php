@@ -252,13 +252,13 @@
                 <i class="fas fa-home"></i>
                 <span>Dashboard</span>
             </a>
-            <a href="<?= base_url('dashboard/setpoint') ?>" class="nav-item">
-                <i class="fas fa-sliders-h"></i>
-                <span>Set-Point</span>
+            <a href="<?= base_url('dashboard/logs') ?>" class="nav-item">
+                <i class="fas fa-list-alt"></i>
+                <span>Logs</span>
             </a>
-            <a href="<?= base_url('dashboard/manual-control') ?>" class="nav-item">
-                <i class="fas fa-cog"></i>
-                <span>Kontrol Manual</span>
+            <a href="<?= base_url('dashboard/history') ?>" class="nav-item">
+                <i class="fas fa-history"></i>
+                <span>Histori Data</span>
             </a>
             <a href="<?= base_url('dashboard/grafik') ?>" class="nav-item">
                 <i class="fas fa-chart-line"></i>

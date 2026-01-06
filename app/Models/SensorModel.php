@@ -12,7 +12,7 @@ class SensorModel extends Model
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['ph', 'tds', 'turb', 'tank', 'chamber', 'created_at'];
+    protected $allowedFields    = ['ph', 'tds', 'turb', 'tank', 'chamber', 'water_quality', 'created_at'];
 
     protected bool $allowEmptyInserts = false;
     protected bool $updateOnlyChanged = true;

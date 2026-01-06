@@ -13,18 +13,59 @@ class WaterParameterModel extends Model
     protected $useSoftDeletes = false;
     protected $allowedFields = ['temperature', 'ph', 'dissolved_oxygen', 'turbidity', 'tds', 'timestamp'];
 
-    // Data dummy untuk parameter air saat ini
+    // Data parameter air saat ini dari database
     public function getCurrentParameters()
     {
-        return [
-            'temperature' => 28.5,
-            'ph' => 7.2,
-            'dissolved_oxygen' => 6.8,
-            'turbidity' => 15.3,
-            'tds' => 450.0,
-            'feed_count' => 3,
-            'system_status' => 'Normal'
+        $db = \Config\Database::connect();
+        
+        // Ambil data sensor terakhir
+        $latestSensor = $db->table('sensors')
+                           ->orderBy('created_at', 'DESC')
+                           ->limit(1)
+                           ->get()
+                           ->getRowArray();
+
+        // Ambil data actuator terakhir
+        $latestActuator = $db->table('actuators')
+                             ->orderBy('created_at', 'DESC')
+                             ->limit(1)
+                             ->get()
+                             ->getRowArray();
+
+        // Default values jika belum ada data
+        $data = [
+            'temperature'      => 0,
+            'ph'               => 0,
+            'dissolved_oxygen' => 0,
+            'turbidity'        => 0,
+            'tds'              => 0,
+            'tank'             => '0%',
+            'chamber'          => '0%',
+            'mixer'            => 0,
+            'feed_count'       => 0,
+            'system_status'    => 'STANDBY',
+            'last_updated'     => '-'
         ];
+
+        if ($latestSensor) {
+            $data['ph']           = (float)($latestSensor['ph'] ?? 0);
+            $data['tds']          = (float)($latestSensor['tds'] ?? 0);
+            $data['turbidity']    = (float)($latestSensor['turb'] ?? 0);
+            $data['tank']         = $latestSensor['tank'] ?? '0%';
+            $data['chamber']      = $latestSensor['chamber'] ?? '0%';
+            $data['last_updated'] = $latestSensor['created_at']; // Tambahan info waktu
+            
+            // Note: Temperature & DO belum ada di tabel sensors yg baru migrate, 
+            // tapi jika nanti ada di tabel sensors, bisa diambil.
+            // Untuk sekarang, saya biarkan 0 atau ambil dari water_parameters jika masih dipakai.
+            // Sesuai request user, fokus ke data: ph, tds, turb, tank, chamber.
+        }
+
+        if ($latestActuator) {
+            $data['mixer'] = (int)($latestActuator['mixer'] ?? 0);
+        }
+
+        return $data;
     }
 
     // Data dummy untuk setpoint
@@ -80,36 +121,78 @@ class WaterParameterModel extends Model
         ];
     }
 
-    // Data dummy untuk chart
-    public function getChartData()
+    // Data asli dari tabel sensors untuk chart dengan filter range & sampling cerdas
+    public function getChartData($range = 'latest')
     {
+        $db = \Config\Database::connect();
+        $builder = $db->table('sensors');
+        
+        if ($range === '1h') {
+            // Gunakan SQL Native DATE_SUB agar sinkron dengan waktu database
+            $builder->where('created_at >= DATE_SUB((SELECT MAX(created_at) FROM sensors), INTERVAL 1 HOUR)');
+            $targetCount = 1000; 
+        } elseif ($range === '24h') {
+            // Ambil 24 jam terakhir dari data paling baru yang ada di DB
+            $builder->where('created_at >= DATE_SUB((SELECT MAX(created_at) FROM sensors), INTERVAL 24 HOUR)');
+            $targetCount = 1000;
+        } else {
+            $targetCount = 30;
+        }
+
+        $builder->orderBy('created_at', 'DESC');
+        
+        // Ambil limit cukup besar untuk sampling
+        $limit = ($range === 'latest') ? 30 : 10000;
+        $builder->limit($limit);
+
+        $sensors = $builder->get()->getResultArray();
+
+        // Balik urutan: Dari DESC (terbaru) menjadi ASC (terlama ke terbaru) untuk grafik
+        $sensors = array_reverse($sensors);
+
+        // Jika data kosong pada 1H (karena gap data), ambil data terbaru saja
+        if (empty($sensors) && ($range === '1h' || $range === '24h')) {
+            $sensors = $db->table('sensors')->orderBy('created_at', 'DESC')->limit(30)->get()->getResultArray();
+            $sensors = array_reverse($sensors);
+        }
+
+        // --- SMART SAMPLING ---
+        if (count($sensors) > $targetCount) {
+            $sampled = [];
+            $step = count($sensors) / ($targetCount - 1);
+            for ($i = 0; $i < $targetCount - 1; $i++) {
+                $index = floor($i * $step);
+                if (isset($sensors[$index])) {
+                    $sampled[] = $sensors[$index];
+                }
+            }
+            $sampled[] = end($sensors); 
+            $sensors = $sampled;
+        }
+
         $labels = [];
-        $temperature = [];
         $ph = [];
-        $do = [];
-        $ntu = [];
+        $turb = [];
         $tds = [];
 
-        // Generate dummy data untuk 20 titik waktu terakhir
-        for ($i = 19; $i >= 0; $i--) {
-            $time = new \DateTime();
-            $time->modify("-{$i} minutes");
-            $labels[] = $time->format('H:i');
+        foreach ($sensors as $sensor) {
+            $timeFormat = ($range === '24h') ? 'H:i' : 'H:i:s';
+            $time = date($timeFormat, strtotime($sensor['created_at']));
+            $labels[] = $time;
             
-            // Generate nilai yang bervariasi sedikit
-            $temperature[] = round(26 + rand(0, 80) / 10, 1);
-            $ph[] = round(6.5 + rand(0, 100) / 100, 1);
-            $do[] = round(4 + rand(0, 40) / 10, 1);
-            $ntu[] = round(10 + rand(0, 200) / 10, 1);
-            $tds[] = round(300 + rand(0, 3000) / 10, 1);
+            $rawPh = (float)($sensor['ph'] ?? 0);
+            $rawTurb = (float)($sensor['turb'] ?? 0);
+            $rawTds = (float)($sensor['tds'] ?? 0);
+
+            $ph[] = ($rawPh >= 0 && $rawPh <= 14) ? $rawPh : null;
+            $turb[] = ($rawTurb >= 0 && $rawTurb <= 2000) ? $rawTurb : null;
+            $tds[] = ($rawTds >= 0 && $rawTds <= 5000) ? $rawTds : null;
         }
 
         return [
             'labels' => $labels,
-            'temperature' => $temperature,
             'ph' => $ph,
-            'do' => $do,
-            'ntu' => $ntu,
+            'turb' => $turb,
             'tds' => $tds
         ];
     }
@@ -124,29 +207,71 @@ class WaterParameterModel extends Model
         ];
     }
 
-    // Data dummy untuk notifikasi
+    // Mendapatkan notifikasi asli dari database
     public function getNotifications()
     {
-        return [
-            [
-                'type' => 'safe',
-                'title' => 'Sistem Normal',
-                'message' => 'Semua parameter dalam batas normal',
-                'time' => date('Y-m-d H:i:s', strtotime('-5 minutes'))
-            ],
-            [
+        $db = \Config\Database::connect();
+        
+        // 1. Ambil notifikasi dari database (tabel notifications)
+        $notifs = $db->table('notifications')
+                     ->orderBy('created_at', 'DESC')
+                     ->limit(15)
+                     ->get()
+                     ->getResultArray();
+
+        // 2. Cek status keaktifan sistem berdasarkan data sensor terakhir
+        $latestSensor = $db->table('sensors')
+                           ->orderBy('created_at', 'DESC')
+                           ->limit(1)
+                           ->get()
+                           ->getRowArray();
+
+        $allNotifications = [];
+        
+        // Tambahkan status keaktifan sistem di paling atas
+        if ($latestSensor) {
+            $lastUpdate = new \DateTime($latestSensor['created_at']);
+            $now = new \CodeIgniter\I18n\Time('now', 'Asia/Jakarta');
+            
+            // Konversi created_at sensor ke DateTime object untuk perbandingan
+            $lastUpdateTime = \CodeIgniter\I18n\Time::parse($latestSensor['created_at'], 'Asia/Jakarta');
+            $diffMinutes = ($now->getTimestamp() - $lastUpdateTime->getTimestamp()) / 60;
+
+            if ($diffMinutes > 5) {
+                $allNotifications[] = [
+                    'type' => 'critical',
+                    'title' => 'Sistem Offline',
+                    'message' => 'Sistem tidak mengirimkan data selama ' . floor($diffMinutes) . ' menit. Mohon periksa perangkat ESP32 dan koneksi internet.',
+                    'time' => $latestSensor['created_at']
+                ];
+            } else {
+                $allNotifications[] = [
+                    'type' => 'safe',
+                    'title' => 'Sistem Online',
+                    'message' => 'Status sistem aktif dan pengiriman data stabil.',
+                    'time' => $latestSensor['created_at']
+                ];
+            }
+        } else {
+            $allNotifications[] = [
                 'type' => 'warning',
-                'title' => 'Peringatan pH',
-                'message' => 'Nilai pH mendekati batas minimum',
-                'time' => date('Y-m-d H:i:s', strtotime('-15 minutes'))
-            ],
-            [
-                'type' => 'safe',
-                'title' => 'Aerator Aktif',
-                'message' => 'Aerator telah diaktifkan',
-                'time' => date('Y-m-d H:i:s', strtotime('-30 minutes'))
-            ]
-        ];
+                'title' => 'Sistem Belum Aktif',
+                'message' => 'Belum ada data sensor yang diterima oleh server.',
+                'time' => date('Y-m-d H:i:s')
+            ];
+        }
+
+        // 3. Masukkan notifikasi parameter dari DB
+        foreach ($notifs as $n) {
+            $allNotifications[] = [
+                'type' => $n['type'] === 'warning' ? 'warning' : ($n['type'] === 'danger' ? 'critical' : 'safe'),
+                'title' => ($n['type'] === 'warning' ? 'Peringatan Parameter' : 'Notifikasi Sistem'),
+                'message' => $n['message'],
+                'time' => $n['created_at']
+            ];
+        }
+
+        return $allNotifications;
     }
 
     /**
