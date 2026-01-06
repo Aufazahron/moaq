@@ -1,126 +1,104 @@
-# Sistem Monitoring Air Kolam
+# 🌊 MOAQ - Smart Water Monitoring System
+> **Real-time Monitoring & Analytics for Interactive Fish Pond Environments**
 
-Aplikasi web untuk monitoring kualitas air kolam secara real-time menggunakan CodeIgniter 4.
+[![CI4 Version](https://img.shields.io/badge/CodeIgniter-v4.6-orange.svg)](https://codeigniter.com/)
+[![PHP Version](https://img.shields.io/badge/PHP-v8.1+-blue.svg)](https://www.php.net/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Timezone](https://img.shields.io/badge/Timezone-Asia%2FJakarta-red)](https://www.iana.org/time-zones)
 
-## 🚀 Quick Start
+MOAQ adalah platform IoT Pintar yang dirancang untuk menjaga kualitas air kolam secara otomatis. Dengan integrasi hardware ESP32, data dari lapangan diproses secara cerdas untuk memberikan wawasan real-time bagi pembudidaya.
 
-### Requirements
-- PHP 8.1+
-- MySQL/MariaDB
-- Composer
+---
 
-### Installation
+## 📸 Preview Home
+![Home Dashboard](public/assets/img/home.jpeg)
 
-1. **Clone repository**
-   ```bash
-   git clone https://github.com/Aufazahron/moaq.git
-   cd moaq
-   git checkout web
-   ```
+---
 
-2. **Install dependencies**
-   ```bash
-   composer install
-   ```
+## ✨ Fitur Unggulan
 
-3. **Setup database**
-   ```bash
-   php create_database.php
-   ```
+### 📊 Visualisasi Cerdas (Smart Graph Engine)
+*   **Dual Y-Axis Display:** Memisahkan skala pH/Turbidity dengan TDS (ppm) untuk visualisasi yang akurat.
+*   **Smart Downsampling:** Query otomatis yang menyaring hingga 10.000 data mentah menjadi 1.000 titik sampel merata untuk menjaga performa browser.
+*   **Accurate Time Range:** Filter rentang waktu (Latest, 1 Jam, 24 Jam) yang sinkron dengan waktu database menggunakan Native SQL.
 
-4. **Run server**
-   ```bash
-   php spark serve
-   ```
+### 🛡️ Integritas Data (Anomaly Detection)
+*   **Sanity Check Logic:** Sensor yang error atau noise (seperti lonjakan nilai hingga 200rb) otomatis dibersihkan di sisi server sebelum disimpan.
+*   **Dynamic Water Quality Status:** Klasifikasi otomatis "Bagus" atau "Kurang Bagus" berdasarkan ambang batas parameter standar.
 
-5. **Access**
-   ```
-   http://localhost:8080
-   ```
+### 🔔 Notifikasi & Kesehatan Sistem
+*   **Auto-Alert System:** Deteksi anomali real-time yang langsung mengirimkan notifikasi peringatan jika parameter keluar dari set-point.
+*   **System Health Check:** Otomatis menandai status "Offline" jika perangkat di kolam berhenti mengirimkan data lebih dari 5 menit.
 
-## 📊 Features
+---
 
-- ✅ Real-time monitoring parameter air
-- ✅ Dashboard monitoring
-- ✅ Grafik historis data
-- ✅ Set-point configuration
-- ✅ Manual control
-- ✅ Notifikasi alert
-- ✅ RESTful API
+## 🛠 Tech Stack
 
-## 🔧 Configuration
+*   **Framework:** [CodeIgniter 4](https://codeigniter.com/)
+*   **Frontend:** Tailwind CSS, FontAwesome 6
+*   **Chart Engine:** Chart.js 4.x
+*   **Database:** MySQL / MariaDB
+*   **IoT Interface:** RESTful API (JSON Based)
 
-Edit `.env` file:
+---
 
-```env
-database.default.database = monitoring_kolam
-database.default.username = root
-database.default.password = 
-```
+## 🚀 Instalasi Cepat
 
-## 📡 API Endpoints
+1.  **Clone repositori:**
+    ```bash
+    git clone https://github.com/Aufazahron/moaq.git
+    cd moaq
+    ```
+2.  **Instal dependensi:**
+    ```bash
+    composer install
+    ```
+3.  **Konfigurasi Database:**
+    Salin `env` menjadi `.env` dan sesuaikan pengaturan database Anda:
+    ```env
+    database.default.database = monitoring_kolam
+    database.default.username = root
+    database.default.password = 
+    app.appTimezone = Asia/Jakarta
+    ```
+4.  **Siapkan Database:**
+    Import file `.sql` terbaru yang ada di folder `database/`.
+5.  **Jalankan aplikasi:**
+    ```bash
+    php spark serve
+    ```
 
-### Sensor Data
-```http
-POST /api/sensor/receive
-Content-Type: application/json
+---
 
+## 📡 Alur Data (API)
+
+Hardware ESP32 mengirim data ke endpoint berikut:
+`POST /api/sensor/receive`
+
+**Payload Format:**
+```json
 {
   "sensors": {
     "ph": 7.2,
-    "tds": 450,
-    "turb": 12.1,
-    "tank": "80%",
-    "chamber": "20%"
+    "tds": 420,
+    "turb": 15.5,
+    "tank": "85%",
+    "chamber": "10%"
   }
 }
 ```
 
-### Get Latest Data
-```http
-GET /api/sensor/latest
-```
+---
 
-### Control Device
-```http
-POST /api/sensor/control
-Content-Type: application/json
+## 👨‍💻 Tim Software
+Aplikasi ini dikembangkan oleh **Tim Software MOAQ** yang berfokus pada:
+1.  **Backend Specialist:** Optimasi query, API Security, & Data Ingestion.
+2.  **Frontend & UX Developer:** Real-time polling, Interactive Visualization, & Responsive Dashboard.
 
-{
-  "device": "aerator",
-  "action": "on"
-}
-```
+---
 
-## 📁 Structure
+## 📄 Lisensi
+Di bawah lisensi **MIT**. Gunakan dengan bijak untuk kemajuan perikanan Indonesia! 🐟🇮🇩
 
-```
-├── app/
-│   ├── Controllers/
-│   │   ├── Dashboard.php
-│   │   └── Api/Sensor.php
-│   ├── Models/
-│   │   ├── SensorModel.php
-│   │   └── WaterParameterModel.php
-│   └── Views/
-│       └── dashboard/
-├── database/
-│   └── monitoring_kolam_complete.sql
-├── public/
-└── .env
-```
-
-## 📖 Documentation
-
-Lihat folder `docs/` untuk dokumentasi lengkap:
-- API Documentation
-- Software Documentation
-- MQTT Integration Guide
-
-## 🤝 Contributing
-
-Pull requests are welcome!
-
-## 📄 License
-
-MIT License
+---
+*Created with ❤️ by MOAQ Team*
